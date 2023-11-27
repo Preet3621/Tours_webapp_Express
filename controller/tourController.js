@@ -1,11 +1,26 @@
 const fs = require('fs');
 const Tour = require('./../models/tourModel')
+const APIFeatures = require('./../utils/apiFeatures')
 
 // 1) ROUTE HANDELERS
 
+exports.aliasTopTours = (req,res,next) => {
+    req.query.limit = '5';
+    req.query.sort = '-ratingAverage,price';
+    req.query.fields = 'name,price,ratingAverage,summary,difficulty';
+    next()
+};
+
 exports.getAllTours = async (req,res) => {
     try{
-    const tours = await Tour.find();
+    // EXECUTE QUERY
+    const features = new APIFeatures(Tour.find(),req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate();
+
+    const tours = await features.query;
     console.log(req.requestTime)
     res.status(300).json({
         status:'success',
@@ -58,7 +73,7 @@ exports.createTour = async (req,res) => {
             message: err.message
         })
     } 
-} 
+};
 
 
 exports.deleteTour = async (req,res)=>{
@@ -164,4 +179,56 @@ exports.updateTour = async (req,res)=>{
 //     }
 //     next()
 // };
+
+// Filtering
+    // const queryObject = {...req.query};
+    // const excludeFields = ['page','sort','limit','fields'];
+    // excludeFields.forEach(el => delete queryObject[el])
+    // console.log(req.query,queryObject);
+
+    // // Advanced Filtering
+    // // in get method in postman ?duration[gte]=5
+    // let queryStr = JSON.stringify(queryObject);
+    // queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g,match => `$${match}`);
+    // console.log(JSON.parse(queryStr))
+
+    // let query = Tour.find(JSON.parse(queryStr));
+    // const tours = await Tour.find()
+    //               .where('duration')
+    //               .equals(5)
+    //               .where('difficulty')
+    //               .equals('easy')
+    //               .exec()
+
+    // sorting
+    // if (req.query.sort){
+    //     const sortBy = req.query.sort.split(',').join(' ')
+    //     console.log(sortBy)
+    //     query = query.sort(sortBy)
+    // }
+    // else {
+    //     query = query.sort('-createdAt')
+    // };
+
+    // limiting fields
+    // if (req.query.fields) {
+    //     const fields = req.query.fields.split(',').join(' ');
+    //     query = query.select(fields)
+    // }
+    // else{
+    //     query = query.select('-__v')
+    // }
+
+    // Pagination
+
+    // const page = (req.query.page) * 1 || 1;
+    // const limit = (req.query.limit) * 1 || 100;
+    // const skip = (page - 1) * limit;
+
+    // query = query.skip(skip).limit(limit)
+
+    // if (req.query.page) {
+    //     if (page * limit >  await Tour.countDocuments()) 
+    //     throw new Error('This page does not exist')
+    // }
 
