@@ -8,9 +8,9 @@ const importData = async () => {
     try {
     await Tour.create(tours);
     console.log('data successfully loaded');
-    } catch (err){
+        } catch (err){
         console.log(err)
-    }
+        }
     process.exit();
 };
 
