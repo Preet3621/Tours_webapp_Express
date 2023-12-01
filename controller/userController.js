@@ -1,35 +1,57 @@
-exports.getAllUsers = (req,res) => {
-    res.status(500).json({
-        status:'error',
-        message:'This route is not yet defined'
-    })
-};
+const User = require('./../models/userModel');
+const APIFeatures = require('./../utils/apiFeatures');
+const catchAsync = require('./../utils/catchAsync');
+const AppError = require('./../utils/appErrors');
 
-exports.getUser = (req,res) => {
-    res.status(500).json({
-        status:'error',
-        message:'This route is not yet defined'
+exports.getAllUsers = catchAsync(async (req,res,next) => {
+    // EXECUTE QUERY
+    const users = await User.find();
+    res.status(200).json({
+        status:'success',
+        data:{
+            users:users
+        }        // middle ware
     })
-};
+});
 
-exports.createUser = (req,res) => {
-    res.status(500).json({
-        status:'error',
-        message:'This route is not yet defined'
+exports.getUser = catchAsync( async (req,res) => {
+    const id = req.params.id 
+    const findUser = await User.findById(req.params.id)
+    if (!User){
+        return next(AppError('This Id is not exist'))
+    }
+    res.status(200).json({
+        status:'success',
+        data: findUser
     })
-};
+});
 
-exports.updateUser = (req,res) => {
-    res.status(500).json({
-        status:'error',
-        message:'This route is not yet defined'
-    })
-};
+// exports.createUser = catchAsync(async(req,res) => {
+//     const newUser = User.create(req.body)
+//     res.status(200).json({
+//         status:'success',
+//         data: newUser
+//     })
+// });
 
-exports.deleteUser = (req,res) => {
-    res.status(500).json({
-        status:'error',
-        message:'This route is not yet defined'
+exports.updateUser = catchAsync(async(req,res) => {
+    const updateUser = await User
+        .findByIdAndUpdate(req.params.id,req.body,{
+        new:true,
+        runValidators:true
     })
-};
+    res.status(200).json({
+        status:'success',
+        data: updateUser
+    })
+});
+
+exports.deleteUser = catchAsync(async(req,res) => {
+    const deleteId = req.params.id;
+    await User.findByIdAndDelete(deleteId)
+    res.status(200).json({
+        status:'error',
+        message:'Successfully deleted document.'
+    })
+});
 

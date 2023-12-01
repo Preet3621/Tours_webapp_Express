@@ -24,7 +24,7 @@ const sendErrorDev = (err,res) => {
     status:err.status,
     error: err,
     message:err.message,
-    stack:err.stack
+    //stack:err.stack
 })
 };
 
@@ -54,13 +54,17 @@ module.exports = (err,req,res,next) =>{
     } 
     else if(process.env.NODE_ENV == 'production') {
       let error = {...err}; 
+      console.log(err.name)
       if (err.name === 'CastError') {
         error = handleCastErrorDB(error)
       } 
       if (err.code === 11000){
         error = handleDuplicateFieldsDB(error)
-      }
-      if(err.errors.difficulty.name ==='ValidatorError'){
+      };
+
+      // const errorMessages = Object.values(error.message.errors).map(error => error.message);
+      // console.log(errorMessages);
+      if(err.name ==='ValidationError'){
         error = handleValidationError(error)
       } 
       sendErrorProd(error,res)

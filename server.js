@@ -30,7 +30,7 @@ const server = app.listen(port, () => {
    console.log(`app running on port ${port}`);
 });
 
-///  error outside of express and mongoose
+// error outside of express and mongoose
 process.on('unhandledRejection',err => { 
    console.log(err.name,err.message);
    console.log('Unhandled Rejection shutting down!....');
