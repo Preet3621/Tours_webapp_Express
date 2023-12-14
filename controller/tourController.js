@@ -15,6 +15,7 @@ exports.aliasTopTours = (req,res,next) => {
 
 exports.getAllTours = catchAsync(async (req,res) => {
     // EXECUTE QUERY
+    console.log('query before',req.query)
     const features = new APIFeatures(Tour.find(),req.query)
     .filter()
     .sort()
@@ -22,6 +23,7 @@ exports.getAllTours = catchAsync(async (req,res) => {
     .paginate();
 
     const tours = await features.query;
+    console.log('query after',req.query)
     console.log(req.requestTime)
     res.status(300).json({
         status:'success',
@@ -55,7 +57,6 @@ exports.createTour = catchAsync(async(req,res,next) => {
             }
             })
 });
-
 
 exports.deleteTour = catchAsync(async (req,res)=>{
     const deletedId = req.params.id;

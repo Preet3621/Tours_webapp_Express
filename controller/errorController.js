@@ -19,6 +19,14 @@ const handleValidationError = err => {
      return new AppError(message, 400)
 }
 
+const handleJwtError = () => {
+    return new AppError('invalid token please login again',401)
+};
+
+const jwtExpiredError = () => {
+    return new AppError('your token has been expired please login again',401)
+};
+
 const sendErrorDev = (err,res) => {
   res.status(err.statusCode).json({
     status:err.status,
@@ -30,15 +38,18 @@ const sendErrorDev = (err,res) => {
 
 const sendErrorProd = (err,res) => {
   if(err.isOperational) {
+      console.log('in send error production')
       res.status(err.statusCode).json({
       status:err.status,
-      message:err.message
+      message:err.message,
+      //stack:err.stack
     })
   }
   else{
       res.status(500).json({
         status:'error',
-        message:err
+        message:err,
+        stack:err.stack
       })
   }
 };
@@ -55,12 +66,18 @@ module.exports = (err,req,res,next) =>{
     else if(process.env.NODE_ENV == 'production') {
       let error = {...err}; 
       console.log(err.name)
+      console.log('in prod error')
       if (err.name === 'CastError') {
         error = handleCastErrorDB(error)
       } 
       if (err.code === 11000){
         error = handleDuplicateFieldsDB(error)
       };
+      if (err.name === 'JsonWebTokenError') {
+        error = handleJwtError()}
+      if (err.name === 'TokenExpiredError') {
+        error = jwtExpiredError()
+      }
 
       // const errorMessages = Object.values(error.message.errors).map(error => error.message);
       // console.log(errorMessages);
