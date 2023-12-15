@@ -27,6 +27,10 @@ const jwtExpiredError = () => {
     return new AppError('your token has been expired please login again',401)
 };
 
+const unAuthorizationError = () => {
+  return new AppError('you are not allowed to perform this task',403)
+}
+
 const sendErrorDev = (err,res) => {
   res.status(err.statusCode).json({
     status:err.status,
@@ -66,6 +70,7 @@ module.exports = (err,req,res,next) =>{
     else if(process.env.NODE_ENV == 'production') {
       let error = {...err}; 
       console.log(err.name)
+      console.log(err)
       console.log('in prod error')
       if (err.name === 'CastError') {
         error = handleCastErrorDB(error)
@@ -74,16 +79,17 @@ module.exports = (err,req,res,next) =>{
         error = handleDuplicateFieldsDB(error)
       };
       if (err.name === 'JsonWebTokenError') {
-        error = handleJwtError()}
+        error = handleJwtError()
+      }
       if (err.name === 'TokenExpiredError') {
         error = jwtExpiredError()
       }
-
-      // const errorMessages = Object.values(error.message.errors).map(error => error.message);
-      // console.log(errorMessages);
       if(err.name ==='ValidationError'){
         error = handleValidationError(error)
       } 
+      if(err.code === 403){
+        error = unAuthorizationError(error)
+      }
       sendErrorProd(error,res)
       next()
     }
