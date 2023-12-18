@@ -1,8 +1,23 @@
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const Tour = require('./../../models/tourModel');
+const fs = require('fs');
 
-const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours-simple.json`,'utf-8'));
+dotenv.config({ path: './config.env' });
+console.log(process.env.DATABASE)
+const DB = process.env.DATABASE.replace(
+  '<password>',
+  process.env.DATABASE_PASSWORD
+);
+
+console.log(DB)
+
+mongoose
+  .connect(DB, {
+  })
+  .then(() => console.log('DB connection successful!'));
+
+const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours.json`,'utf-8'));
 
 const importData = async () => {
     try {
@@ -17,9 +32,10 @@ const importData = async () => {
 const deleteData = async () => {
     try {
         await Tour.deleteMany();
-        console.log('data successfully deleted');
-        } catch (err){
-            console.log(err)
+        console.log('Data successfully deleted!');
+        } 
+    catch (err){
+        console.log(err)
         }
         process.exit();
 };

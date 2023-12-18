@@ -70,7 +70,7 @@ module.exports = (err,req,res,next) =>{
     else if(process.env.NODE_ENV == 'production') {
       let error = {...err}; 
       console.log(err.name)
-      console.log(err)
+      error.message = err.message
       console.log('in prod error')
       if (err.name === 'CastError') {
         error = handleCastErrorDB(error)
@@ -94,3 +94,8 @@ module.exports = (err,req,res,next) =>{
       next()
     }
   };  
+
+
+
+
+  
