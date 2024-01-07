@@ -17,11 +17,13 @@ exports.deleteOne = Model =>
   });
 
 exports.updateOne = Model =>
-  catchAsync(async (req, res, next) => {
+   catchAsync(async (req, res, next) => {
+    console.log('before update query')
     const doc = await Model.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
     });
+    console.log('everything is completed.')
 
     if (!doc) {
       return next(new AppError('No document found with that ID', 404));
@@ -36,7 +38,7 @@ exports.updateOne = Model =>
   });
 
 exports.createOne = Model =>
-  catchAsync(async (req, res, next) => {
+  async (req, res, next) => {
     const doc = await Model.create(req.body);
 
     res.status(201).json({
@@ -45,7 +47,7 @@ exports.createOne = Model =>
         data: doc
       }
     });
-  });
+  };
 
 exports.getOne = (Model, popOptions) =>
   catchAsync(async (req, res, next) => {
@@ -77,7 +79,7 @@ exports.getAll = Model =>
       .limitFields()
       .paginate();
     // const doc = await features.query.explain();
-    const doc = await features.query;
+    const doc = await features.query
 
     // SEND RESPONSE
     res.status(200).json({

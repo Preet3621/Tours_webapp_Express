@@ -3,7 +3,7 @@ const {promisify} = require('util');
 const catchAsync = require('./../utils/catchAsync');
 const jwt = require('jsonwebtoken');
 const AppError = require('./../utils/appErrors');
-const sendEmail = require('./../utils/email');
+const Email = require('./../utils/email');
 const crypto = require('crypto');
 
 const signToken = id => {
@@ -29,7 +29,7 @@ const createSendToken = (user,statusCode,res) => {
     })
 };
 
-exports.signup = catchAsync(async (req,res,next) => {
+exports.signup = async (req,res,next) => {
     //const newUser = await User.create(req.body);  anyone can signup as admin
     const newUser = await User.create({
         name: req.body.name,
@@ -38,11 +38,14 @@ exports.signup = catchAsync(async (req,res,next) => {
         passwordConfirm:req.body.passwordConfirm,
         role:req.body.role
     });
+    const url = `${req.protocol}://${req.get('host')}/me`
+    console.log(url)
+    await new Email(newUser,url).sendWelcome()
 
     createSendToken(newUser,201,res)
-});
+};
 
-exports.login = async(req,res,next) => {
+exports.login = catchAsync(async(req,res,next) => {
     const{email,password} = req.body;
     //check if email,password exist
     if (!email || !password){
@@ -57,21 +60,29 @@ exports.login = async(req,res,next) => {
     }
     // if everything ok sent token to client
     const token = signToken(user._id)
-    res.status(200).json({
-        status:'success',
-        message:'successfully logged-in',
-        token
-    })
+    createSendToken(user, 200, res);
+});
+
+exports.logout = (req, res) => {
+    res.cookie('jwt', 'loggedout', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true
+    });
+    res.status(200).json({ status: 'success' })
 };
 
-exports.protect = catchAsync(async(req,res,next) => {
+exports.protect = async(req,res,next) => {
     // 1) Getting token and check if it is there
+    console.log('entering in protect middleware.')
     let token;
     if(req.headers.authorization &&
        req.headers.authorization.startsWith('Bearer')){
        token = req.headers.authorization.split(' ')[1];
+       console.log('token....')
        console.log(token)
-    };
+    } else if (req.cookies.jwt) {
+       token = req.cookies.jwt
+    }
 
     if(!token){
         return next(new AppError('you are not logged-in please login to get access',401));
@@ -92,8 +103,41 @@ exports.protect = catchAsync(async(req,res,next) => {
         return next (new AppError('User recently changed the password please login again',401))
     }
     req.user = currentUser
+    res.locals.user = currentUser
+    console.log('end of protect middle')
     next()
-});
+};
+
+// Only for rendered pages, no errors!
+exports.isLoggedIn = async (req, res, next) => {
+    if (req.cookies.jwt) {
+      try {
+        // 1) verify token
+        const decoded = await promisify(jwt.verify)(
+          req.cookies.jwt,
+          process.env.JWT_SECRET
+        );
+  
+        // 2) Check if user still exists
+        const currentUser = await User.findById(decoded.id);
+        if (!currentUser) {
+          return next();
+        }
+  
+        // 3) Check if user changed password after the token was issued
+        if (currentUser.changedPasswordAfter(decoded.iat)) {
+          return next();
+        }
+  
+        // THERE IS A LOGGED IN USER
+        res.locals.user = currentUser;
+        return next();
+      } catch (err) {
+        return next();
+      }
+    }
+    next();
+  };
 
 exports.restrictTo = (...roles) => {
     return(req,res,next) => {
@@ -125,11 +169,7 @@ exports.forgotPassword = catchAsync(async(req,res,next) => {
                      ignore this email.`
 
     try {
-    await sendEmail({
-        email:currentUser.email,
-        subject:'your password reset token, valid only for 10 minutes',
-        message
-    });
+    await new Email(currentUser,resetURL).sendPasswordReset()
     res.status(200).json({
         status:'success',
         message:'message sent to the email'
@@ -168,16 +208,18 @@ exports.resetPassword = catchAsync(async (req,res,next) => {
         })
 });
 
-exports.updatePassword = catchAsync(async (req,res,next) => {
-    const {currentpassword,newpassword,confirmnewpassword} = req.body;
+exports.updatePassword = async (req,res,next) => {
+    console.log('entering in updatepassword func')
+    const {passwordCurrent,password,passwordConfirm} = req.body;
+    console.log(req.body)
     const id = req.user.id
     const user = await User.findById(id).select('+password');
     
-    if (!(await user.correctPassword(currentpassword,user.password))){
+    if (!(await user.correctPassword(passwordCurrent,user.password))){
         return next(new AppError('your current password is wrong...',401))
     }
-    user.password = newpassword;
-    user.passwordConfirm = confirmnewpassword;
+    user.password = password;
+    user.passwordConfirm = passwordConfirm;
     await user.save();
     const token = signToken(user._id)
         res.status(200).json({
@@ -185,7 +227,7 @@ exports.updatePassword = catchAsync(async (req,res,next) => {
             message:'changed password successfully,you are logged-in now',
             token
         })
-})
+}
 
 
 

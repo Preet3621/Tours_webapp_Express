@@ -1,3 +1,4 @@
+const path = require('path') 
 const express = require('express');
 const fs = require('fs');
 const morgan = require('morgan');
@@ -5,17 +6,26 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
-const hpp = require('hpp')
-
-const app = express();
-// set security http headers
-app.use(helmet())
+const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
 
 const tourRouter = require('./routes/tourRouter');
 const userRouter = require('./routes/userRouter');
 const AppError = require('./utils/appErrors');
 const globalErrorHandler = require('./controller/errorController');
 const reviewRouter = require('./routes/reviewRouter');
+const viewRouter = require('./routes/viewRouter');
+const bookingRouter = require('./routes/bookingRouter');
+
+
+const app = express();
+// set security http headers
+app.use(helmet());
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
+
+// serving static file
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 1) GLOBAL MIDDLE WARES
 console.log(process.env.NODE_ENV);
@@ -32,6 +42,9 @@ const limiter = rateLimit({
 
 app.use('/api',limiter)
 app.use(express.json({limit:'10kb'})); // middleware
+app.use(express.urlencoded({extended:true,limit:'10kb'}));
+//app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser());
 
 // Data sanitization against Nosql query injection
 app.use(mongoSanitize())              // remove dollar and operator signs from req.body
@@ -53,18 +66,20 @@ app.use(
   })
 );
 
-app.use(express.static(`${__dirname}/public`));
-
 // Body parser, reading data from body into req.body
+// Test middleware
 app.use((req, res, next) => {
-  console.log(req.headers);
   req.requestTime = new Date().toISOString();
+  console.log(req.cookies);
   next();
 });
 
+
+app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter); // parent route
 app.use('/api/v1/reviews', reviewRouter);
+app.use('/api/v1/bookings', bookingRouter);
 
  // this midddleware runs last 
 
@@ -79,7 +94,7 @@ app.all('*',(req,res,next) => {
      next(new AppError(`can't find ${req.originalUrl} on this server`,404))
 });
 
-app.use(globalErrorHandler)
+//app.use(globalErrorHandler)
 
 module.exports = app;
 

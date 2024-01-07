@@ -16,8 +16,8 @@ const userSchema = new mongoose.Schema({
         validate:[validator.isEmail,'please provide a valid email']
     },
 
-    photo:[String],
-
+    photo:{type:String,default:'default.jpg'},
+    
     role:{type:String,
           enum:['user','guide','lead-guide','admin'],
           default:'user'},
@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema({
     passwordResetExpires:Date,
     active:{type: Boolean,
             default: true,
-            select:false}
+            select:false},
 });
 
 userSchema.pre('save', async function(next){

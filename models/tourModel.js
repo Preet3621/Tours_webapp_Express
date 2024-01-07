@@ -25,14 +25,15 @@ const tourSchema = new mongoose.Schema({
       enum:{values:['easy','medium','difficult'],
             message:'Difficulty is either easy medium or difficult'}},
 
-    ratingAverage:{
+    ratingsAverage:{
        type:Number,
        default:4.5,
        min:[1,'Rating must be above one'],
-       max:[5,'Rating must be below five']
+       max:[5,'Rating must be below five'],
+       set: val => Math.round(val * 10) / 10
     },
 
-    ratingQuantity:{
+    ratingsQuantity:{
       type:Number,
       default: 0
     },
@@ -65,7 +66,7 @@ const tourSchema = new mongoose.Schema({
              required:[true,'A tour must have cover image']
     },
 
-    image: [String],
+    images: [String],
 
     createdAt:{
              type: Date,
@@ -113,6 +114,10 @@ const tourSchema = new mongoose.Schema({
     {toJSON:{virtuals:true},
     toObject:{virtuals:true}
  });
+
+ tourSchema.index({price:1,ratingAverage:-1});
+ tourSchema.index({slug:1});
+ tourSchema.index({startLocation:'2dsphere'});
  
  tourSchema.virtual('durationWeeks').get(function(){
          return this.duration / 7;
@@ -172,11 +177,11 @@ const tourSchema = new mongoose.Schema({
 
  // Aggregation middleware
 
- tourSchema.pre('aggregate',function(next){
-      this.pipeline().unshift({$match: {secretTour:{$ne:true}}}); // unshift is used in beggining of array
-      console.log(this.pipeline());
-      next()
- });
+//  tourSchema.pre('aggregate',function(next){
+//       this.pipeline().unshift({$match: {secretTour:{$ne:true}}}); // unshift is used in beggining of array
+//       console.log(this.pipeline());
+//       next()
+//  });
 
  const Tour = mongoose.model('Tour',tourSchema);
 

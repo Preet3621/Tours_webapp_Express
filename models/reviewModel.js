@@ -33,12 +33,67 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
+reviewSchema.index({tour:1,user:1},{unique:true});
+
 reviewSchema.pre(/^find/, function(next) {
     this.populate({
       path: 'user',
       select: 'name photo'
     })
     next()
+});
+
+reviewSchema.statics.calcAverageRating = async function(tourId) {
+  const stats = await this.aggregate([
+    {
+      $match:{tour:tourId}
+    },
+    {
+      $group:{
+        _id:'$tour',
+        nrating:{$sum:1},
+        ratingAverage:{$avg:'$rating'}
+      }
+    }
+  ]);
+  console.log(stats)
+      if (stats.length > 0) {
+      await Tour.findByIdAndUpdate(tourId, {
+        ratingsQuantity: stats[0].nrating,
+        ratingsAverage: stats[0].ratingAverage
+      });
+    } else {
+      await Tour.findByIdAndUpdate(tourId, {
+        ratingsQuantity: 0,
+        ratingsAverage: 4.5
+      });
+    }
+};
+
+reviewSchema.post('save', async function(){
+  // next() is not worked in post 'save' method
+  //here constructor pioints to Review model, we can not directly write Review here bcz that not yet defined 
+  await this.constructor.calcAverageRating(this.tour)
+});
+
+
+reviewSchema.pre(/^findOneAnd/, async function(next) {
+  try{
+  console.log('entered in middleware')
+  // console.log(this.tree)
+  // console.log(body)
+  next()}
+  catch(err){
+       console.log(err)
+  }
+});
+
+reviewSchema.post(/^findOneAnd/, async function(body) {
+  // await this.findOne(); does NOT work here, query has already executed
+  console.log('entered in post middleware')
+  this.r = body
+
+  await this.r.constructor.calcAverageRating(this.r.tour);
 });
 
 const Review = mongoose.model('Review', reviewSchema);
